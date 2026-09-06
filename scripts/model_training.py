@@ -124,7 +124,6 @@ def train_adaboost(train_df, valid_df):
     
     clf = AdaBoostClassifier(
         random_state=RANDOM_STATE,
-        algorithm='SAMME',
         learning_rate=0.8,
         n_estimators=NUM_ESTIMATORS
     )

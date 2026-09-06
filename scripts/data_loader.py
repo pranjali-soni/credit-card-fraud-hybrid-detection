@@ -2,25 +2,19 @@
 Data loading module for credit card fraud detection
 """
 
-import kagglehub
-from kagglehub import KaggleDatasetAdapter
 import pandas as pd
 
 
 def load_data():
     """
-    Load the credit card fraud detection dataset from Kaggle
+    Load the credit card fraud detection dataset from local CSV file
     
     Returns:
         pd.DataFrame: Loaded dataset
     """
-    print("Loading dataset from Kaggle...")
+    print("Loading dataset from local file...")
     
-    data_df = kagglehub.load_dataset(
-        KaggleDatasetAdapter.PANDAS,
-        "mlg-ulb/creditcardfraud",
-        "creditcard.csv"
-    )
+    data_df = pd.read_csv('../data/creditcard.csv')
     
     print(f"Dataset loaded successfully!")
     print(f"Shape: {data_df.shape}")

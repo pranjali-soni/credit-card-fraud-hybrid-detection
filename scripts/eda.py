@@ -68,18 +68,20 @@ def plot_time_distribution(data_df, save=True):
     class_0 = data_df.loc[data_df['Class'] == 0]["Time"]
     class_1 = data_df.loc[data_df['Class'] == 1]["Time"]
     
-    hist_data = [class_0, class_1]
-    group_labels = ['Not Fraud', 'Fraud']
+    fig, ax = plt.subplots(figsize=(10, 6))
+    sns.kdeplot(class_0, label='Not Fraud', fill=True, ax=ax)
+    sns.kdeplot(class_1, label='Fraud', fill=True, ax=ax)
     
-    fig = ff.create_distplot(hist_data, group_labels, show_hist=False, show_rug=False)
-    fig['layout'].update(
-        title='Credit Card Transactions Time Density Plot',
-        xaxis=dict(title='Time [s]')
-    )
+    ax.set_title('Credit Card Transactions Time Density Plot')
+    ax.set_xlabel('Time [s]')
+    ax.set_ylabel('Density')
+    ax.legend()
     
     if save:
-        plot(fig, filename=f'{PLOTS_DIR}/time_distribution.html', auto_open=False)
+        plt.savefig(f'{PLOTS_DIR}/time_distribution.png', dpi=100, bbox_inches='tight')
+        print("  ✓ Time distribution plot saved")
     
+    plt.close(fig)
     return fig
 
 

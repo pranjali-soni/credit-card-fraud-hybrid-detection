@@ -1,0 +1,13 @@
+# Data files (too large for GitHub)
+data/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# CatBoost auto-generated logs
+catboost_info/
+
+# OS files
+.DS_Store
+Thumbs.db
