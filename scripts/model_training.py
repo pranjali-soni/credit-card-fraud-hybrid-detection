@@ -7,7 +7,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import (roc_auc_score, precision_score, recall_score, 
+                             f1_score, average_precision_score, accuracy_score)
 from catboost import CatBoostClassifier
 import xgboost as xgb
 import lightgbm as lgb
@@ -19,6 +20,32 @@ import os
 from config import (RFC_METRIC, NUM_ESTIMATORS, NO_JOBS, RANDOM_STATE, 
                    MAX_ROUNDS, EARLY_STOP, VERBOSE_EVAL, NUMBER_KFOLDS,
                    TARGET, PREDICTORS, PLOTS_DIR)
+
+
+def calculate_metrics(y_true, y_proba, threshold=0.5):
+    """
+    Calculate a full set of evaluation metrics from true labels and predicted probabilities.
+    
+    Args:
+        y_true (array): Actual labels (0 or 1)
+        y_proba (array): Predicted probability of fraud (class 1)
+        threshold (float): Cutoff to convert probability into a hard 0/1 prediction
+        
+    Returns:
+        dict: Dictionary containing Accuracy, Precision, Recall, F1, AUC, AUPRC
+    """
+    y_pred = (y_proba >= threshold).astype(int)
+    
+    metrics = {
+        'Accuracy': accuracy_score(y_true, y_pred),
+        'Precision': precision_score(y_true, y_pred, zero_division=0),
+        'Recall': recall_score(y_true, y_pred, zero_division=0),
+        'F1-Score': f1_score(y_true, y_pred, zero_division=0),
+        'AUC': roc_auc_score(y_true, y_proba),
+        'AUPRC': average_precision_score(y_true, y_proba)
+    }
+    
+    return metrics, y_pred
 
 
 def plot_confusion_matrix(cm, model_name, save=True):
@@ -79,7 +106,7 @@ def train_random_forest(train_df, valid_df):
     Train Random Forest Classifier
     
     Returns:
-        tuple: (model, predictions, auc_score)
+        tuple: (model, predictions, metrics_dict)
     """
     print("\n" + "="*50)
     print("Training RandomForest Classifier...")
@@ -94,9 +121,9 @@ def train_random_forest(train_df, valid_df):
     )
     
     clf.fit(train_df[PREDICTORS], train_df[TARGET].values)
-    preds = clf.predict(valid_df[PREDICTORS])
+    proba = clf.predict_proba(valid_df[PREDICTORS])[:, 1]
     
-    auc_score = roc_auc_score(valid_df[TARGET].values, preds)
+    metrics, preds = calculate_metrics(valid_df[TARGET].values, proba)
     
     # Plot feature importance
     plot_feature_importance(clf.feature_importances_, PREDICTORS, "RandomForest")
@@ -106,9 +133,10 @@ def train_random_forest(train_df, valid_df):
                      rownames=['Actual'], colnames=['Predicted'])
     plot_confusion_matrix(cm, "RandomForest")
     
-    print(f"RandomForest ROC-AUC Score: {auc_score:.4f}")
+    print(f"RandomForest -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
     
-    return clf, preds, auc_score
+    return clf, preds, metrics
 
 
 def train_adaboost(train_df, valid_df):
@@ -116,7 +144,7 @@ def train_adaboost(train_df, valid_df):
     Train AdaBoost Classifier
     
     Returns:
-        tuple: (model, predictions, auc_score)
+        tuple: (model, predictions, metrics_dict)
     """
     print("\n" + "="*50)
     print("Training AdaBoost Classifier...")
@@ -129,9 +157,9 @@ def train_adaboost(train_df, valid_df):
     )
     
     clf.fit(train_df[PREDICTORS], train_df[TARGET].values)
-    preds = clf.predict(valid_df[PREDICTORS])
+    proba = clf.predict_proba(valid_df[PREDICTORS])[:, 1]
     
-    auc_score = roc_auc_score(valid_df[TARGET].values, preds)
+    metrics, preds = calculate_metrics(valid_df[TARGET].values, proba)
     
     # Plot feature importance
     plot_feature_importance(clf.feature_importances_, PREDICTORS, "AdaBoost")
@@ -141,9 +169,10 @@ def train_adaboost(train_df, valid_df):
                      rownames=['Actual'], colnames=['Predicted'])
     plot_confusion_matrix(cm, "AdaBoost")
     
-    print(f"AdaBoost ROC-AUC Score: {auc_score:.4f}")
+    print(f"AdaBoost -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
     
-    return clf, preds, auc_score
+    return clf, preds, metrics
 
 
 def train_catboost(train_df, valid_df):
@@ -151,7 +180,7 @@ def train_catboost(train_df, valid_df):
     Train CatBoost Classifier
     
     Returns:
-        tuple: (model, predictions, auc_score)
+        tuple: (model, predictions, metrics_dict)
     """
     print("\n" + "="*50)
     print("Training CatBoost Classifier...")
@@ -171,9 +200,9 @@ def train_catboost(train_df, valid_df):
     )
     
     clf.fit(train_df[PREDICTORS], train_df[TARGET].values)
-    preds = clf.predict(valid_df[PREDICTORS])
+    proba = clf.predict_proba(valid_df[PREDICTORS])[:, 1]
     
-    auc_score = roc_auc_score(valid_df[TARGET].values, preds)
+    metrics, preds = calculate_metrics(valid_df[TARGET].values, proba)
     
     # Plot feature importance
     plot_feature_importance(clf.feature_importances_, PREDICTORS, "CatBoost")
@@ -183,9 +212,10 @@ def train_catboost(train_df, valid_df):
                      rownames=['Actual'], colnames=['Predicted'])
     plot_confusion_matrix(cm, "CatBoost")
     
-    print(f"CatBoost ROC-AUC Score: {auc_score:.4f}")
+    print(f"CatBoost -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
     
-    return clf, preds, auc_score
+    return clf, preds, metrics
 
 
 def train_xgboost(train_df, valid_df, test_df):
@@ -193,7 +223,7 @@ def train_xgboost(train_df, valid_df, test_df):
     Train XGBoost Classifier
     
     Returns:
-        tuple: (model, predictions, auc_score)
+        tuple: (model, predictions, metrics_dict)
     """
     print("\n" + "="*50)
     print("Training XGBoost Classifier...")
@@ -228,9 +258,10 @@ def train_xgboost(train_df, valid_df, test_df):
         verbose_eval=VERBOSE_EVAL
     )
     
-    # Predict on test set
-    preds = model.predict(dtest)
-    auc_score = roc_auc_score(test_df[TARGET].values, preds)
+    # Predict on test set (these are already probabilities, since objective is binary:logistic)
+    proba = model.predict(dtest)
+    
+    metrics, preds = calculate_metrics(test_df[TARGET].values, proba)
     
     # Plot feature importance
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -240,9 +271,15 @@ def train_xgboost(train_df, valid_df, test_df):
     plt.savefig(f'{PLOTS_DIR}/feature_importance_xgboost.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"XGBoost Test Set ROC-AUC Score: {auc_score:.4f}")
+    # Plot confusion matrix
+    cm = pd.crosstab(test_df[TARGET].values, preds,
+                     rownames=['Actual'], colnames=['Predicted'])
+    plot_confusion_matrix(cm, "XGBoost")
     
-    return model, preds, auc_score
+    print(f"XGBoost -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
+    
+    return model, preds, metrics
 
 
 def train_lightgbm(train_df, valid_df, test_df):
@@ -250,7 +287,7 @@ def train_lightgbm(train_df, valid_df, test_df):
     Train LightGBM Classifier
     
     Returns:
-        tuple: (model, predictions, auc_score)
+        tuple: (model, predictions, metrics_dict)
     """
     print("\n" + "="*50)
     print("Training LightGBM Classifier...")
@@ -301,9 +338,10 @@ def train_lightgbm(train_df, valid_df, test_df):
         ]
     )
     
-    # Predict on test set
-    preds = model.predict(test_df[PREDICTORS])
-    auc_score = roc_auc_score(test_df[TARGET].values, preds)
+    # Predict on test set (already probabilities)
+    proba = model.predict(test_df[PREDICTORS])
+    
+    metrics, preds = calculate_metrics(test_df[TARGET].values, proba)
     
     # Plot feature importance
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -313,9 +351,15 @@ def train_lightgbm(train_df, valid_df, test_df):
     plt.savefig(f'{PLOTS_DIR}/feature_importance_lightgbm.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    print(f"LightGBM Test Set ROC-AUC Score: {auc_score:.4f}")
+    # Plot confusion matrix
+    cm = pd.crosstab(test_df[TARGET].values, preds,
+                     rownames=['Actual'], colnames=['Predicted'])
+    plot_confusion_matrix(cm, "LightGBM")
     
-    return model, preds, auc_score
+    print(f"LightGBM -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
+    
+    return model, preds, metrics
 
 
 def train_lightgbm_cv(train_df, test_df):
@@ -323,7 +367,7 @@ def train_lightgbm_cv(train_df, test_df):
     Train LightGBM with Cross-Validation
     
     Returns:
-        tuple: (oof_predictions, test_predictions, auc_score)
+        tuple: (oof_predictions, test_predictions, metrics_dict)
     """
     print("\n" + "="*50)
     print("Training LightGBM with Cross-Validation...")
@@ -382,7 +426,14 @@ def train_lightgbm_cv(train_df, test_df):
         del model, train_x, train_y, valid_x, valid_y
         gc.collect()
     
-    full_auc = roc_auc_score(train_df[TARGET], oof_preds)
-    print(f'\nFull Cross-Validation AUC: {full_auc:.6f}')
+    metrics, final_preds = calculate_metrics(test_df[TARGET].values, test_preds)
     
-    return oof_preds, test_preds, full_auc
+    # Plot confusion matrix
+    cm = pd.crosstab(test_df[TARGET].values, final_preds,
+                     rownames=['Actual'], colnames=['Predicted'])
+    plot_confusion_matrix(cm, "LightGBM_CV")
+    
+    print(f"\nLightGBM(CV) -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
+    
+    return oof_preds, test_preds, metrics

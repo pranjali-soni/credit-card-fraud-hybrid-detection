@@ -49,28 +49,28 @@ def main():
     results = {}
     
     # Train RandomForest
-    _, _, rf_auc = train_random_forest(train_df, valid_df)
-    results['RandomForest'] = rf_auc
+    _, _, rf_metrics = train_random_forest(train_df, valid_df)
+    results['RandomForest'] = rf_metrics
     
     # Train AdaBoost
-    _, _, ada_auc = train_adaboost(train_df, valid_df)
-    results['AdaBoost'] = ada_auc
+    _, _, ada_metrics = train_adaboost(train_df, valid_df)
+    results['AdaBoost'] = ada_metrics
     
     # Train CatBoost
-    _, _, cat_auc = train_catboost(train_df, valid_df)
-    results['CatBoost'] = cat_auc
+    _, _, cat_metrics = train_catboost(train_df, valid_df)
+    results['CatBoost'] = cat_metrics
     
     # Train XGBoost
-    _, _, xgb_auc = train_xgboost(train_df, valid_df, test_df)
-    results['XGBoost'] = xgb_auc
+    _, _, xgb_metrics = train_xgboost(train_df, valid_df, test_df)
+    results['XGBoost'] = xgb_metrics
     
     # Train LightGBM
-    _, _, lgb_auc = train_lightgbm(train_df, valid_df, test_df)
-    results['LightGBM'] = lgb_auc
+    _, _, lgb_metrics = train_lightgbm(train_df, valid_df, test_df)
+    results['LightGBM'] = lgb_metrics
     
     # Train LightGBM with CV
-    _, _, lgb_cv_auc = train_lightgbm_cv(train_df, test_df)
-    results['LightGBM (CV)'] = lgb_cv_auc
+    _, _, lgb_cv_metrics = train_lightgbm_cv(train_df, test_df)
+    results['LightGBM_CV'] = lgb_cv_metrics
     
     # Step 5: Model Evaluation
     print("\n[STEP 5/6] Evaluating Models...")
@@ -91,7 +91,7 @@ def main():
     print("ANALYSIS COMPLETE!")
     print("="*70)
     print(f"\nTotal Execution Time: {elapsed_time/60:.2f} minutes")
-    print(f"Best Model: {results_df.iloc[0]['Model']} (AUC: {results_df.iloc[0]['AUC Score']:.4f})")
+    print(f"Best Model (by AUC): {results_df.iloc[0]['Model']} (AUC: {results_df.iloc[0]['AUC']:.4f})")
     print(f"\nAll plots saved to: ./plots/")
     print(f"Results saved to: ./plots/model_results.csv")
     print("\n" + "="*70 + "\n")
