@@ -121,3 +121,37 @@ def save_results_to_csv(results_df, filename='model_results.csv'):
     output_path = f'{PLOTS_DIR}/{filename}'
     results_df.to_csv(output_path, index=False)
     print(f"Results saved to {output_path}")
+
+def plot_before_after_smote(results_df_no_smote, results_df_with_smote, metric='F1-Score', save=True):
+    """
+    Plot a before/after SMOTE comparison for a given metric across all models.
+    
+    Args:
+        results_df_no_smote (pd.DataFrame): Results without SMOTE
+        results_df_with_smote (pd.DataFrame): Results with SMOTE
+        metric (str): Which metric to compare (e.g., 'F1-Score', 'Recall', 'Precision', 'AUPRC')
+        save (bool): Whether to save the plot
+    """
+    merged = pd.merge(
+        results_df_no_smote[['Model', metric]].rename(columns={metric: 'Without SMOTE'}),
+        results_df_with_smote[['Model', metric]].rename(columns={metric: 'With SMOTE'}),
+        on='Model'
+    )
+    
+    merged_melted = merged.melt(id_vars='Model', var_name='Condition', value_name=metric)
+    
+    plt.figure(figsize=(12, 7))
+    sns.barplot(data=merged_melted, x=metric, y='Model', hue='Condition', palette=['#e74c3c', '#2ecc71'])
+    plt.title(f'Before vs After SMOTE - {metric} Comparison', fontsize=15)
+    plt.xlabel(metric, fontsize=12)
+    plt.ylabel('Model', fontsize=12)
+    plt.legend(title='')
+    plt.tight_layout()
+    
+    if save:
+        os.makedirs(PLOTS_DIR, exist_ok=True)
+        safe_metric_name = metric.lower().replace(' ', '_').replace('-', '_')
+        plt.savefig(f'{PLOTS_DIR}/smote_comparison_{safe_metric_name}.png', dpi=300, bbox_inches='tight')
+        plt.close()
+    else:
+        plt.show()
