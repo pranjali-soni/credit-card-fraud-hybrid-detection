@@ -7,6 +7,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (roc_auc_score, precision_score, recall_score, 
                              f1_score, average_precision_score, accuracy_score)
 from catboost import CatBoostClassifier
@@ -437,3 +443,195 @@ def train_lightgbm_cv(train_df, test_df):
           f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
     
     return oof_preds, test_preds, metrics
+def train_logistic_regression(train_df, valid_df):
+    """
+    Train Logistic Regression Classifier
+    
+    Returns:
+        tuple: (model, predictions, metrics_dict)
+    """
+    print("\n" + "="*50)
+    print("Training Logistic Regression Classifier...")
+    print("="*50)
+    
+    # Scale features (Logistic Regression is sensitive to feature scale)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(train_df[PREDICTORS])
+    X_valid_scaled = scaler.transform(valid_df[PREDICTORS])
+    
+    clf = LogisticRegression(
+        random_state=RANDOM_STATE,
+        max_iter=1000,
+        class_weight='balanced'
+    )
+    
+    clf.fit(X_train_scaled, train_df[TARGET].values)
+    proba = clf.predict_proba(X_valid_scaled)[:, 1]
+    
+    metrics, preds = calculate_metrics(valid_df[TARGET].values, proba)
+    
+    # Plot confusion matrix
+    cm = pd.crosstab(valid_df[TARGET].values, preds,
+                     rownames=['Actual'], colnames=['Predicted'])
+    plot_confusion_matrix(cm, "LogisticRegression")
+    
+    print(f"Logistic Regression -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
+    
+    return clf, preds, metrics
+
+
+def train_naive_bayes(train_df, valid_df):
+    """
+    Train Gaussian Naive Bayes Classifier
+    
+    Returns:
+        tuple: (model, predictions, metrics_dict)
+    """
+    print("\n" + "="*50)
+    print("Training Naive Bayes Classifier...")
+    print("="*50)
+    
+    clf = GaussianNB()
+    
+    clf.fit(train_df[PREDICTORS], train_df[TARGET].values)
+    proba = clf.predict_proba(valid_df[PREDICTORS])[:, 1]
+    
+    metrics, preds = calculate_metrics(valid_df[TARGET].values, proba)
+    
+    # Plot confusion matrix
+    cm = pd.crosstab(valid_df[TARGET].values, preds,
+                     rownames=['Actual'], colnames=['Predicted'])
+    plot_confusion_matrix(cm, "NaiveBayes")
+    
+    print(f"Naive Bayes -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
+    
+    return clf, preds, metrics
+
+
+def train_knn(train_df, valid_df, sample_size=50000):
+    """
+    Train K-Nearest Neighbors Classifier
+    Note: KNN is trained on a sample of the training data for speed, 
+    since KNN is computationally expensive on large datasets.
+    
+    Returns:
+        tuple: (model, predictions, metrics_dict)
+    """
+    print("\n" + "="*50)
+    print("Training KNN Classifier...")
+    print("="*50)
+    
+    # Scale features (KNN uses distance, so scaling matters a lot)
+    scaler = StandardScaler()
+    
+    # Sample training data for speed (KNN is slow on 180k+ rows)
+    if len(train_df) > sample_size:
+        train_sample = train_df.sample(n=sample_size, random_state=RANDOM_STATE)
+    else:
+        train_sample = train_df
+    
+    X_train_scaled = scaler.fit_transform(train_sample[PREDICTORS])
+    X_valid_scaled = scaler.transform(valid_df[PREDICTORS])
+    
+    clf = KNeighborsClassifier(n_neighbors=5, n_jobs=NO_JOBS)
+    
+    clf.fit(X_train_scaled, train_sample[TARGET].values)
+    proba = clf.predict_proba(X_valid_scaled)[:, 1]
+    
+    metrics, preds = calculate_metrics(valid_df[TARGET].values, proba)
+    
+    # Plot confusion matrix
+    cm = pd.crosstab(valid_df[TARGET].values, preds,
+                     rownames=['Actual'], colnames=['Predicted'])
+    plot_confusion_matrix(cm, "KNN")
+    
+    print(f"KNN -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
+    
+    return clf, preds, metrics
+
+
+def train_decision_tree(train_df, valid_df):
+    """
+    Train Decision Tree Classifier
+    
+    Returns:
+        tuple: (model, predictions, metrics_dict)
+    """
+    print("\n" + "="*50)
+    print("Training Decision Tree Classifier...")
+    print("="*50)
+    
+    clf = DecisionTreeClassifier(
+        random_state=RANDOM_STATE,
+        max_depth=10,
+        class_weight='balanced'
+    )
+    
+    clf.fit(train_df[PREDICTORS], train_df[TARGET].values)
+    proba = clf.predict_proba(valid_df[PREDICTORS])[:, 1]
+    
+    metrics, preds = calculate_metrics(valid_df[TARGET].values, proba)
+    
+    # Plot feature importance
+    plot_feature_importance(clf.feature_importances_, PREDICTORS, "DecisionTree")
+    
+    # Plot confusion matrix
+    cm = pd.crosstab(valid_df[TARGET].values, preds,
+                     rownames=['Actual'], colnames=['Predicted'])
+    plot_confusion_matrix(cm, "DecisionTree")
+    
+    print(f"Decision Tree -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
+    
+    return clf, preds, metrics
+
+
+def train_svm(train_df, valid_df, sample_size=20000):
+    """
+    Train Support Vector Machine Classifier
+    Note: SVM is trained on a sample of the training data for speed,
+    since SVM scales poorly with large datasets.
+    
+    Returns:
+        tuple: (model, predictions, metrics_dict)
+    """
+    print("\n" + "="*50)
+    print("Training SVM Classifier...")
+    print("="*50)
+    
+    # Scale features (SVM is very sensitive to feature scale)
+    scaler = StandardScaler()
+    
+    # Sample training data for speed (SVM is very slow on large datasets)
+    if len(train_df) > sample_size:
+        train_sample = train_df.sample(n=sample_size, random_state=RANDOM_STATE)
+    else:
+        train_sample = train_df
+    
+    X_train_scaled = scaler.fit_transform(train_sample[PREDICTORS])
+    X_valid_scaled = scaler.transform(valid_df[PREDICTORS])
+    
+    clf = SVC(
+        kernel='rbf',
+        probability=True,
+        random_state=RANDOM_STATE,
+        class_weight='balanced'
+    )
+    
+    clf.fit(X_train_scaled, train_sample[TARGET].values)
+    proba = clf.predict_proba(X_valid_scaled)[:, 1]
+    
+    metrics, preds = calculate_metrics(valid_df[TARGET].values, proba)
+    
+    # Plot confusion matrix
+    cm = pd.crosstab(valid_df[TARGET].values, preds,
+                     rownames=['Actual'], colnames=['Predicted'])
+    plot_confusion_matrix(cm, "SVM")
+    
+    print(f"SVM -> AUC: {metrics['AUC']:.4f} | Precision: {metrics['Precision']:.4f} | "
+          f"Recall: {metrics['Recall']:.4f} | F1: {metrics['F1-Score']:.4f} | AUPRC: {metrics['AUPRC']:.4f}")
+    
+    return clf, preds, metrics

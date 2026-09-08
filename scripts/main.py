@@ -9,7 +9,9 @@ from data_loader import load_data, get_data_summary
 from eda import generate_all_eda_plots
 from data_preprocessing import prepare_data
 from model_training import (train_random_forest, train_adaboost, train_catboost,
-                            train_xgboost, train_lightgbm, train_lightgbm_cv)
+                            train_xgboost, train_lightgbm, train_lightgbm_cv,
+                            train_logistic_regression, train_naive_bayes,
+                            train_knn, train_decision_tree, train_svm)
 from model_evaluation import (create_results_summary, plot_model_comparison,
                               generate_evaluation_report, save_results_to_csv)
 import time
@@ -48,29 +50,40 @@ def main():
     print("\n[STEP 4/6] Training Models...")
     results = {}
     
-    # Train RandomForest
+    # --- Original 6 models ---
     _, _, rf_metrics = train_random_forest(train_df, valid_df)
     results['RandomForest'] = rf_metrics
     
-    # Train AdaBoost
     _, _, ada_metrics = train_adaboost(train_df, valid_df)
     results['AdaBoost'] = ada_metrics
     
-    # Train CatBoost
     _, _, cat_metrics = train_catboost(train_df, valid_df)
     results['CatBoost'] = cat_metrics
     
-    # Train XGBoost
     _, _, xgb_metrics = train_xgboost(train_df, valid_df, test_df)
     results['XGBoost'] = xgb_metrics
     
-    # Train LightGBM
     _, _, lgb_metrics = train_lightgbm(train_df, valid_df, test_df)
     results['LightGBM'] = lgb_metrics
     
-    # Train LightGBM with CV
     _, _, lgb_cv_metrics = train_lightgbm_cv(train_df, test_df)
     results['LightGBM_CV'] = lgb_cv_metrics
+    
+    # --- 5 new models ---
+    _, _, lr_metrics = train_logistic_regression(train_df, valid_df)
+    results['LogisticRegression'] = lr_metrics
+    
+    _, _, nb_metrics = train_naive_bayes(train_df, valid_df)
+    results['NaiveBayes'] = nb_metrics
+    
+    _, _, knn_metrics = train_knn(train_df, valid_df)
+    results['KNN'] = knn_metrics
+    
+    _, _, dt_metrics = train_decision_tree(train_df, valid_df)
+    results['DecisionTree'] = dt_metrics
+    
+    _, _, svm_metrics = train_svm(train_df, valid_df)
+    results['SVM'] = svm_metrics
     
     # Step 5: Model Evaluation
     print("\n[STEP 5/6] Evaluating Models...")
