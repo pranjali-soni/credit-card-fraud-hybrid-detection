@@ -14,18 +14,21 @@ from model_training import (train_random_forest, train_adaboost, train_catboost,
                             train_xgboost, train_lightgbm, train_lightgbm_cv,
                             train_logistic_regression, train_naive_bayes,
                             train_knn, train_decision_tree, train_svm)
+from deep_learning_models import train_dnn, train_lstm
 from model_evaluation import (create_results_summary, plot_model_comparison,
-                              generate_evaluation_report, save_results_to_csv)
+                              generate_evaluation_report, save_results_to_csv,
+                              plot_before_after_smote)
 import time
 
 
-def train_all_models(train_df, valid_df, test_df, label=""):
+def train_all_models(train_df, valid_df, test_df, label="", include_deep_learning=True):
     """
-    Train all 11 models on the given training data and return their metrics.
+    Train all models on the given training data and return their metrics.
     
     Args:
         train_df, valid_df, test_df: Data splits
         label (str): Label to identify this run (e.g., "No SMOTE" or "With SMOTE")
+        include_deep_learning (bool): Whether to also train DNN and LSTM (slower)
         
     Returns:
         dict: Results dictionary {model_name: metrics_dict}
@@ -68,6 +71,13 @@ def train_all_models(train_df, valid_df, test_df, label=""):
     
     _, _, svm_metrics = train_svm(train_df, valid_df)
     results['SVM'] = svm_metrics
+    
+    if include_deep_learning:
+        _, _, dnn_metrics = train_dnn(train_df, valid_df)
+        results['DNN'] = dnn_metrics
+        
+        _, _, lstm_metrics = train_lstm(train_df, valid_df)
+        results['LSTM'] = lstm_metrics
     
     return results
 
@@ -130,19 +140,15 @@ def main():
     
     plot_model_comparison(results_df_no_smote)
     save_results_to_csv(results_df_no_smote, filename='model_results_no_smote.csv')
-
+    
     plot_model_comparison(results_df_with_smote)
     save_results_to_csv(results_df_with_smote, filename='model_results_with_smote.csv')
-
-    # Generate before/after SMOTE comparison charts for key metrics
-    from model_evaluation import plot_before_after_smote
+    
     plot_before_after_smote(results_df_no_smote, results_df_with_smote, metric='F1-Score')
     plot_before_after_smote(results_df_no_smote, results_df_with_smote, metric='Recall')
     plot_before_after_smote(results_df_no_smote, results_df_with_smote, metric='Precision')
     plot_before_after_smote(results_df_no_smote, results_df_with_smote, metric='AUPRC')
     print("  ✓ Before/After SMOTE comparison charts saved")
-        
-    print("  ✓ Both result sets saved (no_smote and with_smote versions)")
     
     # Final Summary
     elapsed_time = time.time() - start_time
