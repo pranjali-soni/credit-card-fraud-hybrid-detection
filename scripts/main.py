@@ -6,6 +6,9 @@ Compares model performance WITHOUT SMOTE vs WITH SMOTE
 import warnings
 warnings.filterwarnings('ignore')
 
+from threshold_optimizer import find_optimal_threshold, plot_cost_curve
+from hybrid_model import train_hybrid_model
+from config import TARGET
 from data_loader import load_data, get_data_summary
 from eda import generate_all_eda_plots
 from data_preprocessing import prepare_data
@@ -78,6 +81,18 @@ def train_all_models(train_df, valid_df, test_df, label="", include_deep_learnin
         
         _, _, lstm_metrics = train_lstm(train_df, valid_df)
         results['LSTM'] = lstm_metrics
+    
+    # Hybrid Model (our novel contribution)
+    _, _, hybrid_proba, hybrid_metrics = train_hybrid_model(train_df, valid_df, alpha=0.7)
+    results['HybridModel (Ours)'] = hybrid_metrics
+    
+    # Cost-Sensitive Threshold Optimization applied to our Hybrid Model
+    print("\n[BONUS] Applying Cost-Sensitive Threshold Optimization to Hybrid Model...")
+    y_valid_true = valid_df[TARGET].values
+    best_threshold, cost_results_df = find_optimal_threshold(
+        y_valid_true, hybrid_proba, cost_fn=5000, cost_fp=50
+    )
+    plot_cost_curve(cost_results_df, model_name=f"HybridModel_{label.replace(' ', '_')}")
     
     return results
 
